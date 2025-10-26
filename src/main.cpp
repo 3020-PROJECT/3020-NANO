@@ -27,6 +27,9 @@ typedef enum COMMAND_ID{
 
 String commands[MAX_COMMANDS];
 
+char buffer[256];
+static size_t index;
+
 /* Commands
   exec  -> exec specific command
   read  -> read digital value from pin
@@ -37,11 +40,21 @@ String commands[MAX_COMMANDS];
 
 
 /* lcd related execs
-  init lcd display
+  init lcd display => inits with the address, width and height
   set cursor
   print
 */
 
+
+void  reply(char *OK_KO, const char *optionalMessage){
+  Serial.write(OK_KO);
+  if (optionalMessage){
+    Serial.write(" [");
+    Serial.write(optionalMessage);
+    Serial.write("]");
+  }
+  Serial.write("\r\n");
+}
 
 void initCommands(){
   commands[EXEC] = "exec";
@@ -59,6 +72,7 @@ void setup() {
   lcd.print("wow");
   initCommands();
   Serial.begin(9600);
+  reply("OK", "Protocol initialized and ready !");
 }
 
 
@@ -66,8 +80,10 @@ e_command_id  getCommandID(String command){
   uint8_t id;
   
   for (id = 0; id < MAX_COMMANDS; id++){
-    if (command == commands[id])
+    if (command == commands[id]){
+      reply("OK", "Command Found");
       return (e_command_id)id;
+    }
   }
   return UNKNOWN;
 }
@@ -103,10 +119,9 @@ void  writePin(){
   static const char *values[] = {"low", "high"};
 
   int8_t pin = getPinNumberDigital();
-  Serial.println(pin);
   
   if (pin < 0)
-    return ;
+    return reply("KO", "digital pin must be between 0 and 13"); 
   
   char  *value = strtok(NULL, " ");
   for (size_t i = 0; i < 2; i++)
@@ -116,6 +131,7 @@ void  writePin(){
       return ;
     }
   }
+  reply("KO", "wating low or high");
   return ;
 }
 
@@ -125,7 +141,8 @@ void  readPin(){
     return ;
   
   uint8_t  reading = digitalRead(pin);
-  Serial.println(reading);
+  String rep("Value = " + reading);
+  reply("OK", rep.c_str());
 }
 
 void  awritePin(){
@@ -148,14 +165,14 @@ void  setPinMode(){
   int8_t pin = getPinNumber();
 
   if ((pin < 0 || pin > 21))
-    return;
+    return reply("KO", "pin number must be between 0 and 21");
   
   char  *value = strtok(NULL, " ");
   for (size_t i = 0; i < 2; i++)
   {
     if (!strcmp(value, values[i])){
       pinMode(pin, i);
-      return ;
+      return reply("OK", "pinmode set");
     }
   }
 }
@@ -164,7 +181,6 @@ void  execCommand(char *buffer){
   char *command = strtok(buffer, " ");
   e_command_id  id = getCommandID(command);
 
-  Serial.println(id);
   switch (id)
   {
   case EXEC:
@@ -172,6 +188,7 @@ void  execCommand(char *buffer){
     break;
   case PINMODE:
     setPinMode();
+    break;
   case  READ:
     readPin();
     break;
@@ -185,24 +202,26 @@ void  execCommand(char *buffer){
     awritePin();
     break;
   default:
+    reply("KO", "Unknown Command");
     break;
   }
 }
 
 void loop() {
-  static String buffer;
-  char          c;
+  char c;
 
   while (Serial.available()) {
     c = Serial.read();
-    Serial.print(c);
-    if (c == '\n' || c == '\r') {
-      Serial.println("Received: " + buffer);
-      execCommand((char *)buffer.c_str());
-      buffer = "";
+    Serial.write(c);
+    if (c == '\n') {
+      buffer[index] = '\0';
+      execCommand(buffer);
+      index = 0;
+    } 
+    else if (index < 255) {
+      buffer[index++] = c;
     }
-    else
-      buffer += c;
   }
 }
+
 
