@@ -5,6 +5,15 @@ It allows remote execution of I/O operations such as reading/writing digital or 
 
 ---
 
+## 📸 Preview
+
+<table>
+  <tr>
+    <td align="center"><img src="assets/lcd.jpeg" width="300"/><br><b>LCD TEST</b></td>
+    <td align="center"><img src="assets/back-lcd.jpeg" width="300"/><br><b>SETUP with TL-MR3020</b></td>
+  </tr>
+</table>
+
 ## ✨ Features
 
 - 🔌 **Serial command protocol** for controlling the Arduino Nano  
